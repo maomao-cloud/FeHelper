@@ -650,6 +650,18 @@ let BgPageInstance = (function () {
         console.log(`[FeHelper] Background初始化完成 - ${new Date().toLocaleString()}`);
     };
 
+    // 监听Service Worker激活事件，确保菜单能被正确重建
+    chrome.runtime.onStartup.addListener(() => {
+        console.log(`[FeHelper] onStartup事件触发，重建菜单`);
+        Menu.rebuild();
+    });
+
+    // 监听扩展安装/更新事件，确保菜单能被正确重建
+    chrome.runtime.onInstalled.addListener((details) => {
+        console.log(`[FeHelper] onInstalled事件触发，原因: ${details.reason}，重建菜单`);
+        Menu.rebuild();
+    });
+
     /**
      * 触发截图工具的执行
      * @param {number} tabId - 标签页ID
