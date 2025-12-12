@@ -12,7 +12,9 @@ import Settings from '../options/settings.js';
 export default (function () {
 
     let FeJson = {
-        contextMenuId:"fhm_main"
+        contextMenuId:"fhm_main",
+        // 全局监听器映射表，存储菜单ID到点击处理函数的映射
+        menuClickHandlers: {}
     };
 
     // 邮件菜单配置项
@@ -106,6 +108,18 @@ export default (function () {
         });
     })();
 
+    // 全局菜单点击事件监听器
+    let _globalMenuClickListener = function(info, tab) {
+        if (FeJson.menuClickHandlers[info.menuItemId]) {
+            FeJson.menuClickHandlers[info.menuItemId](info, tab);
+        }
+    };
+
+    // 注册全局监听器（只注册一次）
+    if (!chrome.contextMenus.onClicked.hasListener(_globalMenuClickListener)) {
+        chrome.contextMenus.onClicked.addListener(_globalMenuClickListener);
+    }
+
     /**
      * 创建一个menu 菜单
      * @param toolName
@@ -126,15 +140,10 @@ export default (function () {
                 parentId: FeJson.contextMenuId
             });
 
-            chrome.contextMenus.onClicked.addListener(((tool,mId,mFunc) => (info, tab) => {
-                if(info.menuItemId === mId) {
-                    if(mFunc) {
-                        mFunc(info,tab);
-                    }else{
-                        chrome.DynamicToolRunner({ tool });
-                    }
-                }
-            })(toolName,menuItemId,menu.onClick));
+            // 将菜单ID和点击处理函数存储到映射表中
+            FeJson.menuClickHandlers[menuItemId] = menu.onClick || function() {
+                chrome.DynamicToolRunner({ tool: toolName });
+            };
         });
     };
 
@@ -155,6 +164,9 @@ export default (function () {
      * 创建扩展专属的右键菜单
      */
     let _initMenus = function () {
+        // 清空监听器映射表
+        FeJson.menuClickHandlers = {};
+        
         _removeContextMenu(() => {
             let id = chrome.contextMenus.create({
                 id: FeJson.contextMenuId ,
